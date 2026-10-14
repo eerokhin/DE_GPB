@@ -118,6 +118,79 @@ cursor.close()
 conn.close()
 ```
 
+**3.Скрипт для поиска одинаковых таблиц, в двух .sql файлах (create - файлах)**
+
+```python
+##3.Скрипт для поиска одинаковых таблиц, в двух .sql файлах (create - файлах)
+def extract_created_tables(file_path):
+    with open(file_path, "r", encoding = 'cp1251') as f:
+        sql = f.read()
+
+    #Удаляю комментарии   
+    sql = re.sub(r'/\*.*?\*/', '', sql, flags = re.DOTALL) 
+    sql = re.sub(r'--.*', '', sql)
+    tables = set()
+    matches = re.findall(r'(?:DROP TABLE IF EXISTS|CREATE TABLE IF NOT EXISTS)\s+([^\s(;/]+)', sql, flags=re.IGNORECASE)
+    for t in matches:
+        tables.add(t.strip('`').lower())
+    return tables
+
+tabbles_1 = extract_table('/work/1_create_table_dm_agg.sql')
+tabbles_2 = extract_table('/work/ 1_create_table.sql')  
+common_tables = tabbles_1 & tabbles_2
+print('Таблицы с одинаковым названием')
+for t in sorted(common_tables):
+    print(t)
+print(f"Всего совпало: {len(common_tables)}")
+```
+ 
+**4.Скрипт для поиска одинаковых таблиц, в двух .sql файлах.**
+
+Берет таблицы в файле с `CREATE` и `DROP` и сравненивает с таблицами которые используются в файле `UPDATE` (`FROM/JOIN`) в другом `.sql` файле.
+
+```python
+## 4.Скрипт для поиска одинаковых таблиц, в двух .sql файлах.
+## Берет таблицы в файле с CREATE и DROP и сравненивает с таблицами которые используются в файле UPDATE (FROM/JOIN) в другом .sql файле.
+
+#Поиск таблиц в CREATE и DROP
+def extract_created_tables(file_path):
+    with open(file_path, "r", encoding = 'cp1251') as f:
+        sql = f.read() 
+
+    #Удаляю комментарии   
+    sql = re.sub(r'/\*.*?\*/', '', sql, flags = re.DOTALL) 
+    sql = re.sub(r'--.*', '', sql)   
+    tables = set()
+    matches = re.findall(r'(?:DROP TABLE IF EXISTS|CREATE TABLE IF NOT EXISTS)\s+([^\s(;/]+)', sql, flags=re.IGNORECASE)
+    for t in matches:
+        tables.add(t.strip('`').lower())
+    return tables
+
+#Поиск таблиц в запросе FROM JOIN
+def extract_used_tables(file_path):
+    with open(file_path, "r", encoding = 'cp1251') as f:
+        sql = f.read()
+
+    #Удаляю комментарии   
+    sql = re.sub(r'/\*.*?\*/', '', sql, flags = re.DOTALL) 
+    sql = re.sub(r'--.*', '', sql)
+    tables = set()
+    matches = re.findall(r'(?:FROM|JOIN)\s+([^\s;]+)', sql, flags=re.IGNORECASE)
+    for t in matches:
+        tables.add(t.strip('`').lower())
+    return tables
+ 
+created_tables = extract_created_tables('/work /1_create_table_test.sql')
+used_tables = extract_used_tables('/work /3_update_table_agg_test.sql')  
+
+used_created_tables = created_tables & used_tables
+print('Таблицы которые используются в FROM/JOIN')
+for t in sorted(used_created_tables):
+    print(t)
+
+print(f"Всего совпало: {len(used_created_tables)}")
+```
+
 **5.Скрипт для выполнения запросов на вставку INSERT.**
 
 ```python
