@@ -72,3 +72,48 @@ print('---------------Создание завершено---------------')
 cursor.close()
 conn.close()
 ```
+
+**2.Скрипт для удаления таблиц без создания. С возможностью задать таблицы которые не трогаю.**
+
+```python
+##2.Скрипт для удаления таблиц без создания. С возможностью задать таблицы которые не трогаю.
+#Список таблиц которые не трогаю (не удаляю и не создаю)
+
+tables_to_keep = {                
+                  'schema.table'
+                  }
+
+#with open("/work /1_create_table.sql", "r", encoding = 'cp1251') as f:
+#    sql = f.read()
+
+with open("/work /1_create_table.sql", "r", encoding = 'UTF8') as f:
+    sql = f.read()
+
+   
+#Удаляю комментарии   
+sql = re.sub(r'/\*.*?\*/', '', sql, flags = re.DOTALL) 
+sql = re.sub(r'--.*', '', sql)
+queries = sql.split("/")
+for i, query in enumerate(queries):
+    query = query.strip()  
+    if not query:
+        continue
+
+    drop_match = re.match(r'DROP TABLE IF EXISTS\s+([^\s;]+)', query, flags=re.IGNORECASE)   
+    if drop_match:
+        table_name = drop_match.group(1).strip('`')
+        if table_name in tables_to_keep:
+            print(f"---Skip DROP TABLE {table_name} ---")
+            continue     
+        #Удаляю таблицы
+        try:
+            print(f"\n---Runnig query, drop table {table_name}---")
+            print(query[:100])
+            cursor.execute(query)
+           time.sleep(1)
+        except Exception as e:
+            print(f"Error in query {i}: {e}")
+print('---------------Очистка завершена---------------')       
+cursor.close()
+conn.close()
+```
