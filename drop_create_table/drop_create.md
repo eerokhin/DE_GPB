@@ -261,3 +261,66 @@ for table, qtype, duration, status in stats:
 
 print(f"\nTOTAL TIME: {total_time:.2f} sec")
 ```
+
+**6.Скрипт для определения длины названия таблицы, для код ревью**
+
+```python
+## 6.Скрипт для определения длины названия таблицы, для код ревью
+#Поиск таблиц в CREATE и DROP
+def extract_tables_length(file_path):
+    with open(file_path, "r", encoding = 'cp1251') as f:
+        sql = f.read()
+
+    #Удаляю комментарии   
+    sql = re.sub(r'/\*.*?\*/', '', sql, flags = re.DOTALL) 
+    sql = re.sub(r'--.*', '', sql)   
+    tables = set()
+    matches = re.findall(r'(?:DROP TABLE IF EXISTS|CREATE TABLE IF NOT EXISTS)\s+([^\s(;/]+)', sql, flags=re.IGNORECASE)
+    for t in matches:
+        full_name = t.strip('`').lower()
+        short_name = full_name.split('.')[-1]
+        length = len(short_name)
+        tables.add((full_name, short_name, length))      
+    return tables
+
+tables = extract_tables_length('/work /1_create_table_dm_agg.sql')
+print('Таблицы')
+
+for full_name, short_name, length in sorted(tables):
+    print(f"{length:2} | {short_name} | {full_name}")
+
+print(f"\nВсего таблиц: {len(tables)}")
+``` 
+
+**7.Скрипт для создания файла с TRUNCATE**
+
+```python
+## 7.Скрипт для создания файла с TRUNCATE
+## Создает на основе 1_create_table.sql - файла
+#Поиск таблиц в CREATE и DROP
+def extract_tables_length(file_path):
+    with open(file_path, "r", encoding = 'cp1251') as f:
+        sql = f.read()
+    #Удаляю комментарии   
+    sql = re.sub(r'/\*.*?\*/', '', sql, flags = re.DOTALL) 
+    sql = re.sub(r'--.*', '', sql)
+    tables = []
+    seen = set()
+    matches = re.findall(r'(?:DROP TABLE IF EXISTS|CREATE TABLE IF NOT EXISTS)\s+([^\s(;/]+)', sql, flags=re.IGNORECASE)
+    for t in matches:
+        t_clean = t.strip('`').lower()
+        if t_clean not in seen:
+            tables.append(t_clean) 
+            seen.add(t_clean)
+    return tables
+
+def generate_truncate_sql(tables, output_file):
+    with open(output_file, "w", encoding = 'utf-8') as f:
+        for table in tables:
+            table_name = table.split('.')[-1]
+            line = f"TRUNCATE TABLE IF EXISTS sbxm_hr.{table_name}\n/\n"
+            f.write(line)
+
+tables = extract_tables_length('/work1_create_table.sql')
+generate_truncate_sql(tables,'/work/ 2_truncate_table_dm_agg.sql' )
+```
