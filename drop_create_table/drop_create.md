@@ -222,6 +222,7 @@ queries = sqlparse.split(sql)
 total_start = time.time()
 stats = []
 
+failed = False
 for i, query in enumerate(queries):
     query = query.strip()
     if not query:
@@ -250,6 +251,8 @@ for i, query in enumerate(queries):
         duration = time.time() - start_time
         print(f"Error after {duration:.2f} sec: {e}")
         stats.append((table_name, query_type, duration, "ERROR"))
+        failed = True
+        break
 total_time = time.time() - total_start
 
 cursor.close()
@@ -260,6 +263,12 @@ for table, qtype, duration, status in stats:
     print(f"{status:6} | {qtype:6} | {duration:8.2f} sec | {table}")
 
 print(f"\nTOTAL TIME: {total_time:.2f} sec")
+
+if failed:
+    raise RuntimeError(
+        "Расчёт прерван из-за ошибки SQL. "
+        "Итоговую витрину нельзя считать успешно собранной."
+    )
 ```
 
 **6.Скрипт для определения длины названия таблицы, для код ревью**
